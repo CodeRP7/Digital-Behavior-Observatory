@@ -1,0 +1,36 @@
+﻿# Byte-compiled / optimized Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / local config
+.env
+.env.*
+
+# Git / editor settings
+.git/
+.idea/
+.vscode/
+
+# Local data artifacts (keep raw/processed structured intentionally)
+data/raw/*.csv
+!data/raw/.gitkeep
+!data/raw/README.md
+
+# Large generated outputs
+models/*.pkl
+reports/*.png
+visuals/*.png
