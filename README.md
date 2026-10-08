@@ -1,10 +1,10 @@
 ﻿# Digital Behavior Observatory
 
-This repository is the Day 1 foundation for a production-style portfolio project focused on digital behavior analytics. The goal is to analyze anonymized user interactions to understand engagement, session dynamics, funnel performance, behavioral segments, anomalies, and conversion predictors.
+This repository is a day-by-day project focused on digital behavior analytics. The current completed milestones are dataset selection (Day 1) and a reproducible event-cleaning and sessionization pipeline (Day 2).
 
 ## Day 1 milestone
 
-The project begins with project setup and dataset selection. This repository currently contains the initial foundation only, not the full seven-day analysis pipeline.
+The project began with project setup and selection of the public Google Analytics Universal Analytics sample dataset.
 
 ## Project purpose
 
@@ -90,16 +90,27 @@ This project will use:
 
 ## Data acquisition note
 
-No synthetic or fabricated data is being used. The project intentionally starts with a real public dataset rather than a toy dataset so the analysis remains representative of real digital behavior patterns.
+No synthetic or fabricated data is being used. The raw export is local and is not committed. See [data/README.md](data/README.md) for the exact BigQuery table, export query, schema, and data handling notes.
 
 ## Current status
 
-This version contains the Day 1 setup milestone only:
+Completed:
 
 - repository initialization
 - project structure
 - dataset selection rationale
 - data documentation foundation
-- initial requirements and ignore rules
+- reproducible Day 2 data-quality, cleaning, timestamp, session, and behavioral-feature pipeline
+
+### Run the Day 2 pipeline
+
+Place the CSV export described in [data/README.md](data/README.md) in `data/raw/`, then run these commands from the repository root:
+
+```bash
+python -m src.preprocessing
+python -m unittest discover -s tests
+```
+
+The pipeline creates `data/processed/events_processed.csv`, `data/processed/session_features.csv`, and `reports/day2_data_quality.md`. Generated CSV files and chart images are intentionally ignored by Git; regenerate them from the raw export as needed. Open and run `notebooks/02_session_analysis.ipynb` after running the pipeline.
 
 The full analytical workflow, notebooks, and modeling work will continue in subsequent day-by-day milestones after this foundation is confirmed.

@@ -25,10 +25,11 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Local data artifacts (keep raw/processed structured intentionally)
+# Local raw data and generated processed datasets
 data/raw/*.csv
 !data/raw/.gitkeep
 !data/raw/README.md
+data/processed/*.csv
 
 # Large generated outputs
 models/*.pkl
