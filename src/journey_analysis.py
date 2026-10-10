@@ -225,13 +225,23 @@ def main() -> None:
     events = pd.read_csv(
         EVENTS_PATH,
         dtype={"user_id": "string", "source_session_id": "string", "session_id": "string"},
-        parse_dates=["event_timestamp", "session_start_timestamp"],
     )
+    events["event_timestamp"] = pd.to_datetime(
+        events["event_timestamp"], format="ISO8601", utc=True, errors="raise"
+    )
+    if "session_start_timestamp" in events.columns:
+        events["session_start_timestamp"] = pd.to_datetime(
+            events["session_start_timestamp"], format="ISO8601", utc=True, errors="raise"
+        )
     sessions = pd.read_csv(
         SESSIONS_PATH,
         dtype={"user_id": "string", "session_id": "string"},
-        parse_dates=["session_start", "session_end"],
     )
+    for column in ("session_start", "session_end"):
+        if column in sessions.columns:
+            sessions[column] = pd.to_datetime(
+                sessions[column], format="ISO8601", utc=True, errors="raise"
+            )
 
     journeys = build_session_journey_summary(events, sessions)
     transitions = calculate_transition_frequencies(events)

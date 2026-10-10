@@ -120,6 +120,21 @@ The Day 3 work focuses on behavioral sequence analysis using the actual cleaned 
 
 The evidence suggests that users browse extensively, but many sessions never move beyond discovery or cart-entry intent. The largest opportunity for conversion uplift is in reducing friction or increasing intent after product discovery, rather than in the purchase stage alone.
 
+## Day 4 milestone: behavioral segmentation
+
+The Day 4 workflow moves from session diagnostics to user-level audience segmentation. The analysis uses the real multi-session user behavior in the cleaned GA export rather than arbitrary business labels. The project therefore treats the user as the primary behavioral unit because repeated visitors are present in the data, and it builds a compact feature set based on engagement, navigation, return frequency, and action diversity.
+
+### Day 4 outputs
+
+- [src/feature_engineering.py](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/src/feature_engineering.py): reusable user-level behavioral feature generation, compact feature selection, and clustering preparation
+- `data/processed/user_behavior_features.csv`: one row per user with behavior metrics used for segmentation
+- `data/processed/user_behavior_matrix.csv`: scaled feature matrix for clustering
+- `data/processed/user_segment_summary.csv`: cluster-level behavioral profiles
+
+### Behavioral feature logic
+
+The feature set is intentionally compact and grounded in the observed dataset. It includes user-level measures such as session count, average session duration, events per session, navigation depth, action diversity, and return frequency. Post-conversion metrics are intentionally excluded from the clustering matrix so the segmentation captures underlying behavioral patterns rather than a downstream outcome.
+
 ## Current status
 
 Completed:
@@ -130,6 +145,7 @@ Completed:
 - data documentation foundation
 - reproducible Day 2 data-quality, cleaning, timestamp, session, and behavioral-feature pipeline
 - Day 3 user journey and funnel analysis with dataset-grounded outputs, SQL, notebook, and tests
+- Day 4 user-level behavioral feature engineering and segmentation preparation with a compact clustering-ready feature set
 
 ### Run the Day 2 pipeline
 

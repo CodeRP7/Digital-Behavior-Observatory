@@ -33,7 +33,14 @@ def build_session_features(events: pd.DataFrame) -> pd.DataFrame:
     if events["session_id"].isna().any():
         raise ValueError("Cleaned events contain missing session IDs.")
 
-    ordered = events.sort_values(["session_id", "hit_number"], kind="stable")
+    ordered = events.sort_values(["session_id", "hit_number"], kind="stable").copy()
+    ordered["event_timestamp"] = pd.to_datetime(
+        ordered["event_timestamp"], format="ISO8601", utc=True, errors="raise"
+    )
+    if "session_start_timestamp" in ordered.columns:
+        ordered["session_start_timestamp"] = pd.to_datetime(
+            ordered["session_start_timestamp"], format="ISO8601", utc=True, errors="raise"
+        )
     duplicate_hits = ordered.duplicated(["session_id", "hit_number"], keep=False)
     if duplicate_hits.any():
         raise ValueError(
@@ -135,8 +142,14 @@ def main() -> None:
     events = pd.read_csv(
         EVENTS_PATH,
         dtype={"user_id": "string", "source_session_id": "string", "session_id": "string"},
-        parse_dates=["event_timestamp"],
     )
+    events["event_timestamp"] = pd.to_datetime(
+        events["event_timestamp"], format="ISO8601", utc=True, errors="raise"
+    )
+    if "session_start_timestamp" in events.columns:
+        events["session_start_timestamp"] = pd.to_datetime(
+            events["session_start_timestamp"], format="ISO8601", utc=True, errors="raise"
+        )
     sessions = build_session_features(events)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     sessions.to_csv(SESSIONS_PATH, index=False)
