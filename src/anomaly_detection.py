@@ -60,13 +60,34 @@ def build_anomaly_feature_matrix(
 compute_anomaly_features = build_anomaly_feature_matrix
 
 
-def summarize_feature_distributions(session_features: pd.DataFrame) -> pd.DataFrame:
+def _resolve_feature_columns(feature_columns: list[str] | None) -> list[str]:
+    """Normalize the feature list used by anomaly functions."""
+    if feature_columns is None:
+        return list(DEFAULT_FEATURE_COLUMNS)
+    return list(feature_columns)
+
+
+def summarize_feature_distributions(
+    session_features: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
     """Summarize skew and range so anomaly thresholds are grounded in observed behavior."""
-    matrix = build_anomaly_feature_matrix(session_features)
+    columns = _resolve_feature_columns(feature_columns)
+    matrix = build_anomaly_feature_matrix(session_features, feature_columns=columns)
     numeric = matrix.drop(columns=["session_id", "user_id"])
     summary = (
         numeric.agg(
-            ["mean", "median", "std", "min", "max", "quantile_01", "quantile_05", "quantile_95", "quantile_99"]
+            [
+                "mean",
+                "median",
+                "std",
+                "min",
+                "max",
+                "quantile_01",
+                "quantile_05",
+                "quantile_95",
+                "quantile_99",
+            ]
         )
         .T
     )
@@ -74,11 +95,15 @@ def summarize_feature_distributions(session_features: pd.DataFrame) -> pd.DataFr
     return summary.round(4)
 
 
-def compute_robust_z_scores(session_features: pd.DataFrame) -> pd.DataFrame:
+def compute_robust_z_scores(
+    session_features: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
     """Compute a robust z-score for each candidate anomaly feature."""
-    matrix = build_anomaly_feature_matrix(session_features)
+    columns = _resolve_feature_columns(feature_columns)
+    matrix = build_anomaly_feature_matrix(session_features, feature_columns=columns)
     result = matrix[["session_id", "user_id"]].copy()
-    for column in DEFAULT_FEATURE_COLUMNS:
+    for column in columns:
         values = matrix[column].to_numpy(dtype=float)
         median = np.median(values)
         mad = np.median(np.abs(values - median))
@@ -101,9 +126,16 @@ def fit_isolation_forest(
     observed behavioral tails are strongly skewed. This assumption treats roughly 50 sessions as
     sufficiently rare to warrant investigation without labeling the whole tail as malicious.
     """
-    matrix = build_anomaly_feature_matrix(session_features, feature_columns=feature_columns)
-    feature_columns = list(matrix.columns.difference(["session_id", "user_id"]))
-    X = matrix[feature_columns].copy()
+    if not (0.0 < contamination < 0.5):
+        raise ValueError("contamination must be between 0 and 0.5.")
+    if session_features is None or session_features.empty:
+        raise ValueError("Session feature table is empty; cannot fit an anomaly model.")
+    if len(session_features) < 2:
+        raise ValueError("At least two sessions are required to fit the anomaly model.")
+
+    columns = _resolve_feature_columns(feature_columns)
+    matrix = build_anomaly_feature_matrix(session_features, feature_columns=columns)
+    X = matrix.drop(columns=["session_id", "user_id"]).copy()
     X = X.apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
     scaler = RobustScaler()
@@ -129,12 +161,10 @@ def fit_isolation_forest(
     output["isolation_decision"] = decision.astype(float)
     output["feature_count_flagged"] = 0
 
-    robust_z = compute_robust_z_scores(session_features)
+    robust_z = compute_robust_z_scores(session_features, feature_columns=columns)
     score_columns = [column for column in robust_z.columns if column.endswith("_robust_z")]
     output = output.merge(robust_z, on=["session_id", "user_id"], how="left")
-    output["feature_count_flagged"] = (
-        output[score_columns].abs().gt(3.5).sum(axis=1)
-    )
+    output["feature_count_flagged"] = output[score_columns].abs().gt(3.5).sum(axis=1)
     output["robust_z_max"] = output[score_columns].abs().max(axis=1)
 
     output["anomaly_score"] = output["anomaly_score"].clip(0.0, 1.0)
@@ -142,30 +172,39 @@ def fit_isolation_forest(
     return output.sort_values("anomaly_score", ascending=False).reset_index(drop=True), model
 
 
-def identify_statistical_anomalies(session_features: pd.DataFrame) -> pd.DataFrame:
+def identify_statistical_anomalies(
+    session_features: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
     """Add a simple robust-statistical anomaly flag for a secondary check."""
-    matrix = build_anomaly_feature_matrix(session_features)
-    robust = compute_robust_z_scores(session_features)
+    columns = _resolve_feature_columns(feature_columns)
+    matrix = build_anomaly_feature_matrix(session_features, feature_columns=columns)
+    robust = compute_robust_z_scores(session_features, feature_columns=columns)
     anomaly_flags = matrix[["session_id", "user_id"]].copy()
-    anomaly_flags["robust_z_max"] = robust[[column for column in robust.columns if column.endswith("_robust_z")]].abs().max(axis=1)
+    score_columns = [column for column in robust.columns if column.endswith("_robust_z")]
+    anomaly_flags["robust_z_max"] = robust[score_columns].abs().max(axis=1)
     anomaly_flags["statistical_outlier"] = anomaly_flags["robust_z_max"].gt(3.5)
     return anomaly_flags
 
 
-def build_anomaly_summary(session_anomalies: pd.DataFrame) -> pd.DataFrame:
+def build_anomaly_summary(
+    session_anomalies: pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
     """Summarize behavior by anomaly status for interpretation and reporting."""
     if "anomaly_label" not in session_anomalies.columns:
         raise ValueError("Session anomaly table does not include an anomaly label column.")
 
-    summary_cols = [
-        "session_duration_seconds",
-        "event_count",
-        "navigation_depth",
-        "unique_action_count",
-        "repeated_action_count",
-        "events_per_minute",
-    ]
-    present = [column for column in summary_cols if column in session_anomalies.columns]
+    if feature_columns is None:
+        feature_columns = [
+            "session_duration_seconds",
+            "event_count",
+            "navigation_depth",
+            "unique_action_count",
+            "repeated_action_count",
+            "events_per_minute",
+        ]
+    present = [column for column in feature_columns if column in session_anomalies.columns]
     grouped = session_anomalies.groupby("anomaly_label", dropna=False)
     summary = grouped[["anomaly_score", *present]].mean().reset_index()
     summary["anomaly_count"] = grouped.size().values
