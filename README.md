@@ -135,6 +135,20 @@ The Day 4 workflow moves from session diagnostics to user-level audience segment
 
 The feature set is intentionally compact and grounded in the observed dataset. It includes user-level measures such as session count, average session duration, events per session, navigation depth, action diversity, and return frequency. Post-conversion metrics are intentionally excluded from the clustering matrix so the segmentation captures underlying behavioral patterns rather than a downstream outcome.
 
+## Day 5 milestone: anomaly detection
+
+The Day 5 workflow focuses on finding unusual behavioral patterns in the cleaned session-level data without assuming that unusual behavior is malicious. The session remains the primary unit of analysis because the project was built around session behavior and session features already derived from the event stream.
+
+### Day 5 outputs
+
+- [src/anomaly_detection.py](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/src/anomaly_detection.py): reusable session anomaly engineering, robust statistical checks, and Isolation Forest scoring
+- `data/processed/session_anomaly_scores.csv`: session-level anomaly ranking and behavioral diagnostics
+- `data/processed/session_anomaly_summary.csv`: aggregate profile of anomalous versus normal sessions
+
+### Behavioral anomaly logic
+
+The anomaly model uses interpretable session metrics already established in the project: session duration, event volume, navigation depth, unique action counts, repeated-action counts, and events per minute. The analysis does not treat user or session identifiers as features and intentionally avoids conversion or target labels because the goal is to identify unusual behavior patterns for investigation rather than automatic fraud labeling.
+
 ## Current status
 
 Completed:
