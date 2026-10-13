@@ -149,6 +149,27 @@ The Day 5 workflow focuses on finding unusual behavioral patterns in the cleaned
 
 The anomaly model uses interpretable session metrics already established in the project: session duration, event volume, navigation depth, unique action counts, repeated-action counts, and events per minute. The analysis does not treat user or session identifiers as features and intentionally avoids conversion or target labels because the goal is to identify unusual behavior patterns for investigation rather than automatic fraud labeling.
 
+## Day 6 milestone: conversion prediction and behavioral modeling
+
+The Day 6 workflow frames conversion as a session-level classification problem using the project’s real GA behavioral data. The target is the observed transaction flag already encoded in the cleaned session features, and the modeling dataset excludes identifiers and post-outcome signals so the model only uses information available before the conversion decision is known.
+
+### Day 6 outputs
+
+- [src/modeling.py](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/src/modeling.py): reusable conversion dataset builder, feature leakage audit, model comparison pipeline, and error analysis helpers
+- [notebooks/06_conversion_prediction.ipynb](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/notebooks/06_conversion_prediction.ipynb): end-to-end conversion prediction notebook covering problem framing, leakage audit, model training, evaluation, and business interpretation
+- [sql/conversion_prediction.sql](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/sql/conversion_prediction.sql): SQL patterns for conversion-rate summaries by device, behavior, and time-of-day context
+- [tests/test_day6_conversion_modeling.py](C:/Users/rahul/OneDrive/Desktop/repos/Digital-Behavior-Observatory/tests/test_day6_conversion_modeling.py): regression tests for leakage safeguards, target definition, and model comparison behavior
+
+### Modeling logic
+
+The final prediction unit is the composite session (`user_id + source_session_id`), which aligns with the source schema and avoids leakage from multi-session user histories. Candidate features include session engagement depth, action diversity, page volume, dwell-time intensity, device/context variables, and pre-session user behavior measures such as return frequency. The leakage audit explicitly excludes `transaction_count`, `converted`, user IDs, source session IDs, and timestamps that would be unavailable at prediction time.
+
+The comparison uses a validation split with class imbalance in mind and evaluates a small set of defensible models: logistic regression, random forest, and histogram gradient boosting. The logistic regression model performs best on validation average precision, which makes it both interpretable and operationally useful for identifying the most conversion-relevant behavioral signals.
+
+### Business interpretation
+
+The strongest conversion signals in this dataset are tied to intentional browsing and product discovery: deeper navigation, higher action diversity, and more purposeful exits or entry pages are associated with conversion probability. The evidence is consistent with the earlier Days 3–5 findings: conversion is not driven by isolated clicks alone, but by sustained, meaningful engagement that reflects shopper intent rather than passive browsing.
+
 ## Current status
 
 Completed:
@@ -160,6 +181,8 @@ Completed:
 - reproducible Day 2 data-quality, cleaning, timestamp, session, and behavioral-feature pipeline
 - Day 3 user journey and funnel analysis with dataset-grounded outputs, SQL, notebook, and tests
 - Day 4 user-level behavioral feature engineering and segmentation preparation with a compact clustering-ready feature set
+- Day 5 anomaly detection and behavioral outlier diagnostics
+- Day 6 conversion prediction and behavioral modeling with leakage audit, modeling pipeline, notebook, SQL, and tests
 
 ### Run the Day 2 pipeline
 
